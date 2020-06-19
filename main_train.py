@@ -206,7 +206,7 @@ def main():
     fileid_field_name = 'file_name'
 
     # load the whole subset in memory
-    load_into_memory = True
+    load_into_memory = False
 
     nb_t_steps_pad = 'max'
     has_gt_text = True
@@ -267,7 +267,7 @@ def main():
     print("Begin training...")
     for epoch in range(start_train_epoch, nepochs):
 
-        log_fh = open(model_dir + '/train.log', mode='at')
+        log_fh = open('train.log', mode='at')
 
         print("epoch:", epoch)
         print("train subset...")
