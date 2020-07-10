@@ -21,7 +21,6 @@ def get_params_dict(
         use_spec_augment,
         lr,
         weight_decay,
-        n_attn_heads,
         emb_fpath,
         freeze_embeddings
 ):
@@ -50,7 +49,6 @@ def get_params_dict(
         "use_spec_augment":use_spec_augment,
         "learning_rate": lr,
         "weight_decay": weight_decay,
-        "n_attn_heads": n_attn_heads,
         "emb_basename": emb_basename,
         "freeze_str":freeze_str
     }
@@ -73,8 +71,8 @@ def save_checkpoint(
     for el in params_dict['pBLSTM_time_reductions']:
         time_reduction_string += str(el) + '_'
     if do_pretrain_decoder_as_an_lm:
-        model_dir = os.path.join(save_dir, params_dict['model_name'], params_dict['corpus_name'],
-                                 'decoder_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(params_dict['vocab_size'],
+        model_dir = os.path.join(save_dir,
+                                 'decoder_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(params_dict['vocab_size'],
                                                             time_reduction_string,
                                                          params_dict['hidden_dim'],
                                                          params_dict['value_size'],
@@ -83,12 +81,11 @@ def save_checkpoint(
                                                          params_dict['use_spec_augment'],
                                                          params_dict['learning_rate'],
                                                          params_dict['weight_decay'],
-                                                         params_dict['n_attn_heads'],
                                                          params_dict['emb_basename'],
                                                          params_dict['freeze_str']))
     else:
-        model_dir = os.path.join(save_dir, params_dict['model_name'], params_dict['corpus_name'],
-                                 '{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_dev_eva_conv'.format(params_dict['vocab_size'],
+        model_dir = os.path.join(save_dir,
+                                 '{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_dev_eva_conv'.format(params_dict['vocab_size'],
                                                                      time_reduction_string,
                                                                      params_dict['hidden_dim'],
                                                                      params_dict['value_size'],
@@ -97,8 +94,7 @@ def save_checkpoint(
                                                                      params_dict['use_spec_augment'],
                                                                      params_dict['learning_rate'],
                                                                      params_dict['weight_decay'],
-                                                                     params_dict['n_attn_heads'],
-                                                                     params_dict['emb_basename'],
+                                                                    params_dict['emb_basename'],
                                                                      params_dict['freeze_str']))
 
     if not os.path.exists(model_dir):

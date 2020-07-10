@@ -271,7 +271,7 @@ class Decoder(nn.Module):
     Greedy decoder
     """
     def __init__(self, vocab_size, embedding_dim=128, decoder_hidden_size_1=128, decoder_hidden_size_2=128,
-                 query_size=128, value_size=128, key_size=128, n_attn_heads=0,  emb_fpath=None, freeze_embeddings=False, isAttended=False,
+                 query_size=128, value_size=128, key_size=128, emb_fpath=None, freeze_embeddings=False, isAttended=False,
                  teacher_forcing_ratio=0.9, word2index=None, device='cpu'):
         super(Decoder, self).__init__()
 
@@ -293,9 +293,6 @@ class Decoder(nn.Module):
         self.query_size = query_size
         assert query_size == value_size and query_size == key_size, "ERROR: decoder, query_size!=key_size or query_size!=value_size"
 
-        self.n_attn_heads = n_attn_heads
-        self.use_multihead_attn = self.n_attn_heads > 0
-
         self.query_network = nn.Linear(decoder_hidden_size_2, query_size)
 
         self.teacher_forcing_ratio = teacher_forcing_ratio
@@ -310,18 +307,8 @@ class Decoder(nn.Module):
 
         self.isAttended = isAttended
 
-
-        if (isAttended == True):
-
-            if self.use_multihead_attn :
-                assert query_size % n_attn_heads == 0, "ERROR: decoder, query_size % n_attn_heads != 0"
-                self.attention = nn.MultiheadAttention(embed_dim=query_size,
-                                                       num_heads=n_attn_heads,
-                                                       kdim=key_size,
-                                                       vdim=value_size,
-                                                       dropout=0.1)
-            else:
-                self.attention = Attention()
+        if isAttended:
+            self.attention = Attention()
 
         self.character_prob = nn.Linear(decoder_hidden_size_2 + query_size, vocab_size)
 
@@ -403,15 +390,7 @@ class Decoder(nn.Module):
                 query = self.query_network(output)  # B, h
 
                 # key and values are fixed and are the output of the encoder, size: T,B,h
-                if self.use_multihead_attn:
-                    query = query.unsqueeze(0) # add length of 1 as first dim
-                    mask = mask.squeeze() # no need for 1-dim with MultiHead layer
-
-                    # Note that we need to onvert mask since Pytorch will fill the True elements with -inf
-                    context, _ = self.attention(query, key, values, key_padding_mask=~mask, need_weights=False)
-                    context = torch.squeeze(context)
-                else:
-                    context, attention_mask = self.attention(query, key, values,
+                context, attention_mask = self.attention(query, key, values,
                                                          mask)  # context: B,h ; attention_mask: B, T_speech_after_pBLSTM_reduction
                 context = context.to(self.DEVICE)
 
@@ -442,7 +421,6 @@ class Seq2Seq(nn.Module):
                  decoder_hidden_size_2=128,
                  query_size=128, value_size=128, key_size=128, isAttended=True,
                  pBLSTM_time_reductions=[2, 2, 2],
-                 n_attn_heads=0,
                  emb_fpath=None, freeze_embeddings=False,
                  teacher_forcing_ratio=0.9, word2index=None, return_attention_masks=False, device='cpu'):
 
@@ -453,7 +431,6 @@ class Seq2Seq(nn.Module):
         self.decoder = Decoder(vocab_size, embedding_dim=embedding_dim, decoder_hidden_size_1=decoder_hidden_size_1,
                                decoder_hidden_size_2=decoder_hidden_size_2,
                                query_size=query_size, value_size=value_size, key_size=key_size,
-                               n_attn_heads=n_attn_heads,
                                emb_fpath=emb_fpath, freeze_embeddings=freeze_embeddings,
                                isAttended=isAttended,
                                teacher_forcing_ratio=teacher_forcing_ratio, word2index=word2index, device=device)
@@ -504,7 +481,7 @@ class BeamDecoder(nn.Module):
     Beam search decoder, uses length normalization BS w or w/o LM
     """
     def __init__(self, vocab_size, embedding_dim=128, decoder_hidden_size_1=128, decoder_hidden_size_2=128,
-                 query_size=128, value_size=128, key_size=128, n_attn_heads=0, isAttended=False, beam_size=10, use_lm_bigram=False, use_lm_trigram=False, lm_weight=0.,
+                 query_size=128, value_size=128, key_size=128, isAttended=False, beam_size=10, use_lm_bigram=False, use_lm_trigram=False, lm_weight=0.,
                  teacher_forcing_ratio=0.9, word2index=None, index2word=None, vocab=None, device='cpu'):
 
         super(BeamDecoder, self).__init__()
@@ -546,19 +523,9 @@ class BeamDecoder(nn.Module):
         self.DEVICE = device
 
         self.isAttended = isAttended
-        self.n_attn_heads = n_attn_heads
-        self.use_multihead_attn = self.n_attn_heads > 0
 
         if isAttended:
-            if self.use_multihead_attn :
-                assert query_size % n_attn_heads == 0, "ERROR: decoder, query_size % n_attn_heads != 0"
-                self.attention = nn.MultiheadAttention(embed_dim=query_size,
-                                                       num_heads=n_attn_heads,
-                                                       kdim=key_size,
-                                                       vdim=value_size,
-                                                       dropout=0.1)
-            else:
-                self.attention = Attention()
+            self.attention = Attention()
 
         self.character_prob = nn.Linear(decoder_hidden_size_2 + query_size, vocab_size)
 
@@ -573,7 +540,7 @@ class BeamDecoder(nn.Module):
         :return predictions: Returns the word prediction probability
         '''
 
-        # TODO: code to enable batch_size>1
+        # TODO: enable batch_size>1
 
         k = self.beam_size
 
@@ -630,16 +597,8 @@ class BeamDecoder(nn.Module):
                 query = self.query_network(output)  # B, h
                 # key and values are fixed and are the output of the encoder, size: T,B,h
 
-                if self.use_multihead_attn:
-                    query = query.unsqueeze(0)  # add length of 1 as first dim
-                    mask = mask.squeeze(1)  # need B,L w L=1 since beamsearch uses batches of 1 sample at a time
-                    # Note that we need to onvert mask since Pytorch will fill the True elements with -inf
-                    context, _ = self.attention(query, key, values, key_padding_mask=~mask, need_weights=False)
-                    context = torch.squeeze(context)
-                else:
-                    context, attention_mask = self.attention(query, key, values,
+                context, attention_mask = self.attention(query, key, values,
                                                              mask)  # context: B,h ; attention_mask: B, T_speech_after_pBLSTM_reduction
-
                 context = context.to(self.DEVICE)
                 if k<2:
                     context = torch.unsqueeze(context, dim=0)
@@ -764,7 +723,7 @@ class BeamSeq2Seq(nn.Module):
     def __init__(self, input_dim, vocab_size, encoder_hidden_dim=128, use_spec_augment=False, embedding_dim=128, decoder_hidden_size_1=128,
                  decoder_hidden_size_2=128,
                  query_size=128, value_size=128, key_size=128, isAttended=True,
-                 pBLSTM_time_reductions=[2, 2, 2], n_attn_heads=0,
+                 pBLSTM_time_reductions=[2, 2, 2],
                  teacher_forcing_ratio=0.9, beam_size=2, use_lm_bigram=False, use_lm_trigram=False, lm_weight=0., word2index=None, index2word=None, vocab=None,
                  return_attention_masks=False, device='cpu'):
         super(BeamSeq2Seq, self).__init__()
@@ -785,7 +744,7 @@ class BeamSeq2Seq(nn.Module):
         self.decoder = BeamDecoder(vocab_size, embedding_dim=embedding_dim, decoder_hidden_size_1=decoder_hidden_size_1,
                                decoder_hidden_size_2=decoder_hidden_size_2,
                                query_size=query_size, value_size=value_size, key_size=key_size,
-                               isAttended=isAttended, n_attn_heads=n_attn_heads,
+                               isAttended=isAttended,
                                use_lm_bigram=use_lm_bigram, use_lm_trigram=use_lm_trigram, lm_weight=lm_weight,
                                beam_size=beam_size,
                                teacher_forcing_ratio=teacher_forcing_ratio, word2index=word2index, index2word=index2word, vocab=vocab,

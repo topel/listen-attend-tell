@@ -62,7 +62,6 @@ print("Vocab:", len(WORD_LIST) )
 def main():
 
     # Train?
-    do_train_model = True
     do_pretrain_decoder_as_an_lm = False
     # weight_decay=0.
     weight_decay = 1e-6
@@ -73,7 +72,7 @@ def main():
     do_load_checkpoint = False
     do_load_decoder = False
 
-    checkpoint_pathname = 'checkpoints/seq2seq/clotho/best_model/4367_red_2_2__128_64_0.98_False_False_0.0005_1e-06/40_1.6245147620307074_2.6875626488429742_checkpoint.tar'
+    checkpoint_pathname = 'checkpoints/40_1.6245147620307074_2.6875626488429742_checkpoint.tar'
     save_dir='checkpoints'
 
     input_dim = 64
@@ -94,10 +93,9 @@ def main():
 
     # teacher_forcing_ratio = 1.
     teacher_forcing_ratio = float(sys.argv[1]) # 0.98
-    n_attn_heads = int(sys.argv[2]) # default: n_attn_heads=0
 
     # pBLSTM_time_reductions = [2, 2, 2]
-    config_pBLSTM_str = sys.argv[3:]
+    config_pBLSTM_str = sys.argv[2:]
     pBLSTM_time_reductions = [int(config_pBLSTM_str[i]) for i in range(len(config_pBLSTM_str))]
     print("config pBLSTM", pBLSTM_time_reductions)
     # nb_pBLSTM_layers = len(pBLSTM_time_reductions) # from 1 to 3
@@ -110,7 +108,6 @@ def main():
     print("use Gumbel noise", use_gumbel_noise)
     print("use teacher forcing", teacher_forcing_ratio)
     print("use SpecAugment", use_spec_augment)
-    print("use n_attn_heads:", n_attn_heads)
 
     model = Seq2Seq(input_dim=input_dim, vocab_size=vocab_size, encoder_hidden_dim=encoder_hidden_dim,
                         use_spec_augment=use_spec_augment,
@@ -119,7 +116,6 @@ def main():
                         decoder_hidden_size_2=decoder_hidden_size_2, query_size=query_size,
                         value_size=value_size, key_size=key_size, isAttended=True,
                         pBLSTM_time_reductions=pBLSTM_time_reductions,
-                        n_attn_heads=n_attn_heads,
                         emb_fpath=emb_fpath, freeze_embeddings=freeze_embeddings,
                         teacher_forcing_ratio=teacher_forcing_ratio, # beam_size=beam_size, lm_weight=lm_weight,
                         word2index=word2index, return_attention_masks=False, device=DEVICE)
@@ -194,7 +190,7 @@ def main():
     corpus_name='clotho'
     params_dict = get_params_dict(model_name, corpus_name, input_dim, vocab_size, embedding_dim, value_size,
                                   pBLSTM_time_reductions, teacher_forcing_ratio, use_gumbel_noise, use_spec_augment,
-                                  lr, weight_decay, n_attn_heads, emb_fpath, freeze_embeddings)
+                                  lr, weight_decay, emb_fpath, freeze_embeddings)
 
     # training data loader
     split = 'clotho_dataset_dev'

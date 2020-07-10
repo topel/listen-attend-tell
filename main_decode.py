@@ -2,7 +2,7 @@
 
 import torch
 
-from models import Seq2Seq, masked_ce_loss, masked_ce_loss_per_utt, count_parameters, BeamSeq2Seq, BeamSeq2SeqNg
+from models import Seq2Seq, masked_ce_loss, masked_ce_loss_per_utt, count_parameters, BeamSeq2Seq
 
 import numpy as np
 import random
@@ -67,9 +67,8 @@ def main():
 
     # Load pre-trained?
     do_load_checkpoint = True
-    do_load_decoder = False
 
-    do_decode_val = False
+    do_decode_val = True
     do_decode_val_beamsearch = False
 
     do_plot_attention_masks_on_val = False
@@ -100,7 +99,7 @@ def main():
             print("beam_size:", beam_size, "no LM")
 
 
-    model_dir = "/tmpdir/pellegri/dcase2020_task6/seq2seq/clotho/4367_red_2_2__128_64_0.98_False_False_0.0005_1e-06/"
+    model_dir = "checkpoints/4367_red_2_2__128_64_0.98_False_False_0.0005_1e-06/"
     checkpoint_pathname = model_dir + '40_1.6245147620307074_2.6875626488429742_checkpoint.tar'
     save_dir='checkpoints'
     print("save_dir", save_dir)
@@ -121,8 +120,7 @@ def main():
 
     # teacher_forcing_ratio = 1.
     teacher_forcing_ratio = float(sys.argv[1]) # 0.98 or 1 when scoring predictions
-    n_attn_heads = int(sys.argv[2])
-    config_pBLSTM_str = sys.argv[3:]
+    config_pBLSTM_str = sys.argv[2:]
 
     pBLSTM_time_reductions = [int(config_pBLSTM_str[i]) for i in range(len(config_pBLSTM_str))]
     print("config pBLSTM", pBLSTM_time_reductions)
@@ -137,21 +135,19 @@ def main():
     print("use Gumbel noise", use_gumbel_noise)
     print("use teacher forcing", teacher_forcing_ratio)
     print("use SpecAugment", use_spec_augment)
-    print("use n_attn_heads:", n_attn_heads)
 
     if do_decode_val or do_decode_test:
 
         model = Seq2Seq(input_dim=input_dim, vocab_size=vocab_size, encoder_hidden_dim=encoder_hidden_dim,
-                            use_spec_augment=use_spec_augment,
-                            embedding_dim=embedding_dim,
-                            decoder_hidden_size_1=decoder_hidden_size_1,
-                            decoder_hidden_size_2=decoder_hidden_size_2, query_size=query_size,
-                            value_size=value_size, key_size=key_size, isAttended=True,
-                            pBLSTM_time_reductions=pBLSTM_time_reductions,
-                            n_attn_heads=n_attn_heads,
-                            emb_fpath=emb_fpath, freeze_embeddings=freeze_embeddings,
-                            teacher_forcing_ratio=teacher_forcing_ratio, # beam_size=beam_size, lm_weight=lm_weight,
-                            letter2index=word2index, return_attention_masks=False, device=DEVICE)
+                        use_spec_augment=use_spec_augment,
+                        embedding_dim=embedding_dim,
+                        decoder_hidden_size_1=decoder_hidden_size_1,
+                        decoder_hidden_size_2=decoder_hidden_size_2, query_size=query_size,
+                        value_size=value_size, key_size=key_size, isAttended=True,
+                        pBLSTM_time_reductions=pBLSTM_time_reductions,
+                        emb_fpath=emb_fpath, freeze_embeddings=freeze_embeddings,
+                        teacher_forcing_ratio=teacher_forcing_ratio,  # beam_size=beam_size, lm_weight=lm_weight,
+                        word2index=word2index, return_attention_masks=False, device=DEVICE)
 
     elif do_decode_val_beamsearch or do_decode_test_beamsearch :
         print("Beam decoding w")
@@ -168,9 +164,8 @@ def main():
                         decoder_hidden_size_2=decoder_hidden_size_2, query_size=query_size,
                         value_size=value_size, key_size=key_size, isAttended=True,
                             pBLSTM_time_reductions=pBLSTM_time_reductions,
-                            n_attn_heads=n_attn_heads,
                         teacher_forcing_ratio=teacher_forcing_ratio, beam_size=beam_size, use_lm_bigram=use_lm_bigram, use_lm_trigram=use_lm_trigram, lm_weight=lm_weight,
-                            letter2index=word2index, index2letter=index2word, vocab=WORD_LIST, return_attention_masks=False, device=DEVICE)
+                            word2index=word2index, index2letter=index2word, vocab=WORD_LIST, return_attention_masks=False, device=DEVICE)
 
     print(model)
 
@@ -188,18 +183,6 @@ def main():
 
         start_train_epoch = model_checkpoint["iteration"]
 
-    elif do_load_decoder:
-        print("Loading decoder checkpoint: ", checkpoint_pathname)
-        decoder_checkpoint = torch.load(
-            checkpoint_pathname, map_location=DEVICE
-        )
-        decoder_state = decoder_checkpoint["model"]
-        model.decoder.load_state_dict(decoder_state)
-        model = model.to(DEVICE)
-
-        lr = 0.001
-        start_train_epoch = 0 # decoder_checkpoint["iteration"]
-
     model = model.to(DEVICE)
 
     criterion = masked_ce_loss
@@ -212,13 +195,13 @@ def main():
 
     print("nepochs", nepochs)
     print("batch_size", val_batch_size)
-    print("learning rate", lr)
 
     model_name='seq2seq'
     corpus_name='clotho'
+    lr=0
     params_dict = get_params_dict(model_name, corpus_name, input_dim, vocab_size, embedding_dim, value_size,
                                   pBLSTM_time_reductions, teacher_forcing_ratio, use_gumbel_noise, use_spec_augment,
-                                  lr, weight_decay, n_attn_heads, emb_fpath, freeze_embeddings)
+                                  lr, weight_decay, emb_fpath, freeze_embeddings)
 
     split = 'clotho_dataset_dev'
     input_field_name = 'features'
@@ -327,8 +310,7 @@ def main():
                     print("%s\t%.3f"%(m, average_metrics[m]))
                 result_fh.write("%s\t%.3f\n" % ('SPIDEr', average_metrics['SPIDEr']))
 
-                result_fh.write("%s,%d,%.3f,%s,%s\n" % ("_".join(config_pBLSTM_str),
-                                                     n_attn_heads,
+                result_fh.write("%s,%.3f,%s,%s\n" % ("_".join(config_pBLSTM_str),
                                                      average_metrics['SPIDEr'],
                                                      checkpoint_pathname,
                                                         emb_fpath
