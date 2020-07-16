@@ -8,7 +8,7 @@ import numpy as np
 import random
 
 from utils_train_val_test import decode_val, bs_decode_val, decode_test, bs_decode_test, score_test_captions
-from utils import get_params_dict, plot_att_masks_to_png_files, write_csv_prediction_file, load_gt_captions, read_csv_prediction_file
+from utils import get_params_dict, plot_att_masks_to_png_files, write_csv_prediction_file, load_gt_captions, read_csv_prediction_file, index2words
 
 from clotho_dataloader.data_handling.my_clotho_data_loader import get_clotho_loader, create_dictionaries, modify_vocab
 from eval_metrics import evaluate_metrics_from_lists
@@ -281,16 +281,16 @@ def main():
                 captions_pred, captions_gt_indices, all_ids_str = decode_val(model, val_loader, criterion, index2word, word2index,
                                       decode_first_batch_only=decode_first_batch_only, use_gumbel_noise=False, plot_att=False,  device=DEVICE)
 
-                # captions_gt = index2words(captions_gt_indices, index2word)
+                captions_gt = index2words(captions_gt_indices, index2word)
             #
                 captions_pred_every_five = captions_pred[::5]
                 all_ids_str_every_five = all_ids_str[::5]
                 # save_gt_captions(data_dir + "/clotho_captions_evaluation.pkl", captions_gt, all_ids_str_every_five)
                 # save_gt_captions(data_dir + "/clotho_captions_evaluation_50.pkl", captions_gt, all_ids_str_every_five)
 
-                gt_file = "/clotho_captions_evaluation.pkl"
-                print("GT CAPTION FILE:", data_dir +  gt_file)
-                captions_gt = load_gt_captions(data_dir + gt_file, all_ids_str_every_five)
+                # gt_file = "/clotho_captions_evaluation.pkl"
+                # print("GT CAPTION FILE:", data_dir +  gt_file)
+                # captions_gt = load_gt_captions(data_dir + gt_file, all_ids_str_every_five)
 
                 print("captions_gt_indices", len(captions_gt_indices))
                 print("captions_pred", len(captions_pred))
