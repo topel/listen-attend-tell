@@ -68,8 +68,8 @@ def main():
     # Load pre-trained?
     do_load_checkpoint = True
 
-    do_decode_val = True
-    do_decode_val_beamsearch = False
+    do_decode_val = False
+    do_decode_val_beamsearch = True
 
     do_plot_attention_masks_on_val = False
     decode_first_batch_only = False
@@ -79,7 +79,7 @@ def main():
 
     score_captions = False
 
-    beam_size = 25
+    beam_size = 10
     # beam_size = int(sys.argv[1])
     use_lm_bigram = False
     use_lm_trigram = False
@@ -165,7 +165,7 @@ def main():
                         value_size=value_size, key_size=key_size, isAttended=True,
                             pBLSTM_time_reductions=pBLSTM_time_reductions,
                         teacher_forcing_ratio=teacher_forcing_ratio, beam_size=beam_size, use_lm_bigram=use_lm_bigram, use_lm_trigram=use_lm_trigram, lm_weight=lm_weight,
-                            word2index=word2index, index2letter=index2word, vocab=WORD_LIST, return_attention_masks=False, device=DEVICE)
+                            word2index=word2index, index2word=index2word, vocab=WORD_LIST, return_attention_masks=False, device=DEVICE)
 
     print(model)
 
@@ -349,11 +349,11 @@ def main():
         # captions_pred_every_five = captions_pred
         # all_ids_str_every_five = all_ids_str
 
-        gt_file = "/clotho_captions_evaluation.pkl"
-        print("GT CAPTION FILE:", data_dir + gt_file)
-        captions_gt = load_gt_captions(data_dir + gt_file, all_ids_str_every_five)
+        # gt_file = "/clotho_captions_evaluation.pkl"
+        # print("GT CAPTION FILE:", data_dir + gt_file)
+        # captions_gt = load_gt_captions(data_dir + gt_file, all_ids_str_every_five)
 
-        # captions_gt = index2words(captions_gt_indices, index2word)
+        captions_gt = index2words(captions_gt_indices, index2word)
 
         print("captions_gt_indices", len(captions_gt_indices))
         print("captions_gt", len(captions_gt))
