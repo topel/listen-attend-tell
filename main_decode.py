@@ -68,8 +68,8 @@ def main():
     # Load pre-trained?
     do_load_checkpoint = True
 
-    do_decode_val = False
-    do_decode_val_beamsearch = True
+    do_decode_val = True
+    do_decode_val_beamsearch = False
 
     do_plot_attention_masks_on_val = False
     decode_first_batch_only = False
